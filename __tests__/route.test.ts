@@ -1,122 +1,162 @@
-import { describe, it, expect, vi } from "vitest";
-import { GET, POST, DELETE, PUT, PATCH } from "../app/api/todo/route"; // Adjust path
-import db from "@/src/db";
-import { todo } from "@/src/db/schema";
-import { NextRequest } from "next/server";
+import dotenv from 'dotenv';
+import { NextRequest } from 'next/server';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import db from '@/src/db';
+import { GET, POST, DELETE, PUT, PATCH } from '@/app/api/todo/route';
 
+dotenv.config();
 
+// Mock database module
+vi.mock('@/src/db', () => ({
+  default: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    delete: vi.fn(),
+    update: vi.fn(),
+  },
+}));
 
-describe("Todo API", () => {
-  it("should retrieve todos on GET", async () => {
-    vi.spyOn(db, "select").mockReturnValue({
-        from: () => ({
-            orderBy: () => ({
-                execute: () =>
-                    Promise.resolve([
-                        { id: "1", title: "Test", description: "Test Desc", createdAt: new Date() },
-                    ]),
-            }),
-        }),
-    } as any);
+describe('Todo API Routes', () => {
+  const mockTodo = {
+    id: 'test-todo-id',
+    title: 'Test Todo',
+    description: 'Test Description',
+    completed: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
-    const response = await GET(new NextRequest("http://localhost:3000"));
-    const data = await response.json();
-    expect(data).toEqual([{ id: "1", title: "Test", description: "Test Desc", createdAt: expect.any(Date) }]);
-});
-
-  it("should create a todo on POST", async () => {
-    vi.spyOn(db, "insert").mockReturnValue({
-        values: () => ({
-          returning: () => ({
-            execute: () =>
-              Promise.resolve([
-                { id: "1", title: "New Todo", description: "New Desc", createdAt: new Date() },
-              ]),
-          }),
-        }),
-      } as any);
-      
-      vi.spyOn(db, "select").mockReturnValue({
-        from: () => ({
-          orderBy: () => ({
-            execute: () =>
-              Promise.resolve([
-                { id: "1", title: "Test", description: "Test Desc", createdAt: new Date() },
-              ]),
-          }),
-        }),
-      } as any);
-    const response = await POST(new NextRequest("http://localhost:3000", { body: JSON.stringify({ title: "New Todo", description: "New Desc" }) }));
-    const data = await response.json();
-    expect(data).toBeEqual({ id: "1", title: "New Todo", description: "New Desc", createdAt: new Date() });
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("should delete a todo on DELETE", async () => {
-    vi.spyOn(db, "select").mockReturnValue({
-        from: () => ({
-          orderBy: () => ({
-            execute: async () => ({
-              fields: [], // Mock fields metadata
-              command: "SELECT",
-              rowCount: 1,
-              rowAsArray: false,
-              rows: [
-                { id: "1", title: "Test Todo", description: "Test Desc", createdAt: new Date() },
-              ],
+  describe('GET /api/todos', () => {
+    it('should return a list of todos', async () => {
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockResolvedValue([mockTodo]),
+        }),
+      });
+
+      const req = new NextRequest('http://localhost/api/todos');
+      const res = await GET(req);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([
+        {
+          ...mockTodo,
+          createdAt: mockTodo.createdAt.toISOString(),
+          updatedAt: mockTodo.updatedAt.toISOString(),
+        },
+      ]);
+    });
+  });
+  describe('POST /api/todos', () => {
+    it('should create a new todo', async () => {
+      const mockTodo = {
+        id: 'test-todo-id',
+        title: 'Test Todo',
+        description: 'Test Description',
+        completed: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+  
+      (db.insert as any).mockReturnValue({
+        values: vi.fn().mockResolvedValue([mockTodo]),
+      });
+  
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([mockTodo]),
             }),
           }),
         }),
-      } as any);
-      
-      vi.spyOn(db, "insert").mockReturnValue({
-        values: () => ({
-          returning: () => ({
-            execute: async () => ({
-              fields: [], // Mock fields metadata
-              command: "INSERT",
-              rowCount: 1,
-              rowAsArray: false,
-              rows: [
-                { id: "1", title: "New Todo", description: "New Desc", createdAt: new Date() },
-              ],
-            }),
-          }),
+      });
+  
+      const req = new NextRequest('http://localhost/api/todos', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: mockTodo.title,
+          description: mockTodo.description,
         }),
-      } as any);
-      
-    const response = await DELETE(new NextRequest("http://localhost:3000", { body: JSON.stringify({ id: "1" }) }));
-    const data = await response.json();
-    expect(data.message).toBe("Todo deleted");
+      });
+  
+      const res = await POST(req);
+  
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        ...mockTodo,
+        createdAt: mockTodo.createdAt.toISOString(),
+        updatedAt: mockTodo.updatedAt.toISOString(),
+      });
+    });
+  }); 
+
+  describe('DELETE /api/todos', () => {
+    it('should delete a todo', async () => {
+      (db.delete as any).mockReturnValue({
+        where: vi.fn().mockResolvedValue({}),
+      });
+
+      const req = new NextRequest('http://localhost/api/todos', {
+        method: 'DELETE',
+        body: JSON.stringify({ id: 'test-todo-id' }),
+      });
+
+      const res = await DELETE(req);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ message: 'Todo deleted' });
+    });
   });
 
-  it("should update a todo on PUT", async () => {
-    vi.spyOn(db, "update").mockReturnValue({
-        set: () => ({
-            where: () => ({
-                returning: () => ({
-                    execute: () => Promise.resolve([{ id: "1", title: "Updated", description: "Updated Desc", createdAt: new Date() }]),
-                }),
-            }),
+  describe('PUT /api/todos', () => {
+    it('should update a todo', async () => {
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
         }),
-    } as any);
-    const response = await PUT(new NextRequest("http://localhost:3000", { body: JSON.stringify({ id: "1", title: "Updated", description: "Updated Desc" }) }));
-    const data = await response.json();
-    expect(data.message).toBe("Todo updated");
+      });
+
+      const req = new NextRequest('http://localhost/api/todos', {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: 'test-todo-id',
+          title: 'Updated Todo',
+          description: 'Updated Description',
+        }),
+      });
+
+      const res = await PUT(req);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ message: 'Todo updated' });
+    });
   });
 
-  it("should update completion status on PATCH", async () => {
-    vi.spyOn(db, "update").mockReturnValue({
-        set: () => ({
-            where: () => ({
-                returning: () => ({
-                    execute: () => Promise.resolve([{ id: "1", completed: true }]),
-                }),
-            }),
+  describe('PATCH /api/todos', () => {
+    it('should update a todo completion status', async () => {
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue({}),
         }),
-    } as any);
-    const response = await PATCH(new  NextRequest("http://localhost:3000", 
-    { body: JSON.stringify({ id: "1", completed: true }) }));
-    const data = await response.json();
-    expect(data.message).toBe("Todo updated");
+      });
+
+      const req = new NextRequest('http://localhost/api/todos', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          id: 'test-todo-id',
+          completed: true,
+        }),
+      });
+
+      const res = await PATCH(req);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ message: 'Todo updated' });
+    });
   });
 });

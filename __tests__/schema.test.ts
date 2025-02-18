@@ -1,27 +1,31 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { drizzle } from "drizzle-orm/neon-server";
+import { drizzle } from 'drizzle-orm/neon-http';
+import { sql } from 'drizzle-orm';
 import { neon } from "@neondatabase/serverless";
 import { todo, user } from "../src/db/schema"; // Adjust path
 import { eq } from "drizzle-orm";
 
-const sql = neon("postgresql://neondb_owner:npg_ptEH1I7YJgyw@ep-dark-cell-a8nu8kl7-pooler.eastus2.azure.neon.tech/neondb?sslmode=require");
-const db = drizzle(sql);
-
+const connection = neon("postgresql://neondb_owner:npg_ptEH1I7YJgyw@ep-dark-cell-a8nu8kl7-pooler.eastus2.azure.neon.tech/neondb?sslmode=require");
+const db = drizzle(connection);
 beforeAll(async () => {
-  await db.execute(sql`CREATE TABLE IF NOT EXISTS todo (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    completed BOOLEAN NOT NULL DEFAULT FALSE,
-    createdAt TIMESTAMP NOT NULL DEFAULT now(),
-    updatedAt TIMESTAMP NOT NULL DEFAULT now()
-  )`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS todo (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      completed BOOLEAN NOT NULL DEFAULT FALSE,
+      "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+      "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+    )
+  `);
 
-  await db.execute(sql`CREATE TABLE IF NOT EXISTS "user" (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email TEXT NOT NULL,
-    password TEXT NOT NULL
-  )`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "user" (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email TEXT NOT NULL,
+      password TEXT NOT NULL
+    )
+  `);
 });
 
 afterAll(async () => {

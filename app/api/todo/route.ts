@@ -32,4 +32,3 @@ export async function PATCH(request: NextRequest) {
     await db.update(todo).set({ completed }).where(eq(todo.id, id));
     return NextResponse.json({ message: "Todo updated" });
 }
-
