@@ -1,0 +1,20 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/node:20.10 # Adjust Node version if needed
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: npm install
+      - run:
+          name: Run tests with coverage
+          command: npx vitest run --coverage
+      - run:
+          name: Upload coverage to Coveralls
+          command: cat ./coverage/lcov.info | npx coveralls
+      - run:
+          name: Upload coverage to Codecov
+          command: npx codecov -f coverage/lcov.info
