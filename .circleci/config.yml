@@ -1,9 +1,12 @@
 version: 2.1
 
+orbs:
+  codecov: codecov/codecov@3 # Use version 3 or 4 (5 is still very new and might have issues)
+
 jobs:
   test:
     docker:
-      - image: cimg/node:20.10 # Adjust the Node.js version if needed
+      - image: cimg/node:20.10 # Adjust Node.js version if needed
     steps:
       - checkout
       - run:
@@ -15,19 +18,10 @@ jobs:
       - run:
           name: Upload coverage to Coveralls
           command: cat ./coverage/lcov.info | npx coveralls --repo-token $COVERALLS_REPO_TOKEN
-      - run:
-          name: Upload coverage to Codecov
-          command: npx codecov -f coverage/lcov.info
+      - codecov/upload:
+          file: ./coverage/lcov.info # Upload to Codecov
 
 workflows:
-  version: 2
-  test_pipeline:
+  test_and_upload_coverage:
     jobs:
       - test
-orbs:
-  codecov: codecov/codecov@5
-workflows:
-  upload-to-codecov:
-    jobs:
-      - checkout 
-      - codecov/upload
