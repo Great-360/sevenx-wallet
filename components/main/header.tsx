@@ -1,3 +1,4 @@
+"use client";
 import React from 'react'
 import Navbar from './Navbar'
 
@@ -7,7 +8,7 @@ const Header = () => {
       <Navbar />
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
-          <span className="inline-flex items-center text-purple-400 text-sm">
+          <span className="inline-flex items-center text-purple-400 text-5xl font-semibold first-letter:text-sm">
             #1 Rated SevenX E-spcace <span className="ml-2">🔍</span>
           </span>
         </div>
