@@ -24,3 +24,10 @@ workflows:
   test_pipeline:
     jobs:
       - test
+orbs:
+  codecov: codecov/codecov@5
+workflows:
+  upload-to-codecov:
+    jobs:
+      - checkout 
+      - codecov/upload
